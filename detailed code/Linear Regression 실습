@@ -1,0 +1,110 @@
+X = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+Y = [1, 1, 2, 4, 5, 7, 8, 9, 9, 10]
+
+import matplotlib.pyplot as plt
+#plt.scatter(X, Y) # plot 보다 다양한 요소 표현 가능(크기, 색상)
+#plt.show()
+
+class H(): #선형 회귀 분석을 위한 클래스
+    def __init__(self, w):
+        self.w = w
+
+    def forward(self, x): # 가중치를 바탕으로 예상값 출력
+        return self.w*x # y = wx 와 같은 형상
+
+""" 클래스 H가 정상적으로 작동하는지 확인하는 부분  
+h = H(4)
+pred_y = h.forward(5)
+print('value of f(5) : ', pred_y)
+print('value of w : ', h.w)
+"""
+
+def cost(h, X, Y): # Error를 확인하는 Cost function
+    error = 0
+    for i in range(len(X)):
+        error += (h.forward(X[i]) - Y[i])**2 # 예측했던 선형방정식과 실제 값의 차이의 제곱
+    error = error / len(X) # error의 평균
+    return error # error 출력
+
+def better_cost(pred_y, true_y): #같은 함수인데 보통 계산된 y를 받아서 error를 찾는 방법이 일반적임.
+    error = 0
+    for i in range(len(X)):
+        error += (pred_y[i] - true_y[i]) ** 2
+    error = error / len(X)
+    return error
+
+h = H(4)
+pred_y = [ h.forward(X[i]) for i in range(len(X)) ] # X의 길이만큼 h.forward(X[i]) 를 리스트로 만듬
+print('cost value with better code structrue : ', better_cost(pred_y, Y))
+print('cost value when w = 4 : ', cost(h, X, Y))
+
+# -20 ~ 20까지의 w값들 중에 error가 최소가 되는 값을 눈으로 보기위한 코드
+list_w = []
+list_c = []
+for i in range(-20, 20):
+    w = i * 0.5
+    h = H(w)
+    c = cost(h, X, Y)
+    list_w.append(w)
+    list_c.append(c)
+
+#print(list_w)
+#print(list_c)
+c_min = min(list_c) # error의 최솟값 확인
+index = list_c.index(min(list_c)) # 최솟값에 해당하는 위치 확인 -> 어떤 w 값에서 최소인지 찾기위해서
+print(c_min, index) # 최솟값, 자리 출력
+print(list_w[index]) # 그 자리에 해당하는 w 값 출력
+
+plt.figure(figsize=(10, 5)) #창의 크기를 10, 5 inch로 설정
+plt.xlabel('w')
+plt.ylabel('cost(error)')
+plt.scatter(list_w, list_c, s=3) # s는 데이터 점의 크기를 조정
+plt.show()
+
+def cal_grad(w, cost): # 방법 1 : 수치해석적으로 구현
+    h = H(w)
+    cost1 = cost(h, X, Y)
+    eps = 0.00001
+    h = H(w + eps)
+    cost2 = cost(h, X, Y)
+    dcost = cost2 - cost1
+    dw = eps
+    grad = dcost / dw
+    return grad, (cost1+cost2)*0.5 #cost1, cost2의 평균, error값을 출력한다고 보면됨
+
+def cal_grad2(w, cost): # 방법 2 : 편미분한 공식에 바로 대입하여 Gradient 근사
+    h = H(w)
+    grad = 0
+    for i in range(len(X)):
+        grad += 2 * (h.forward(X[i]) - Y[i]) * X[i] # w에 대해서 편미분 -> x를 곱해주는 형태로 남음(cost funcion을 편미분했기 때문)
+    grad = grad / len(X) # 평균적인 gradient
+    c = cost(h, X, Y) # cost(error)를 알기 위해서 구함
+    return grad, c
+
+# w를 지정해주고 그에 따른 Gradient descent 확인
+w1 = 1.4
+w2 = 1.1 # 이 부분을 바꾸어 주면서 확인
+lr = 0.01 # learning rate
+
+list_w1 = []
+list_c1 = []
+list_w2 = []
+list_c2 = []
+
+for i in range(100): # 총 100번을 학습함
+    grad, mean_cost = cal_grad(w1, cost)
+    grad2, mean_cost2 = cal_grad2(w2, cost)
+
+    w1 -= lr * grad # 기울기가 나온 반대방향으로 가야지 0으로 가까워지기 때문에 빼주는 것
+    w2 -= lr * grad2
+    list_w1.append(w1)
+    list_w2.append(w2)
+    list_c1.append(mean_cost)
+    list_c2.append(mean_cost2)
+
+print(w1, mean_cost, w2, mean_cost2)
+
+plt.scatter(list_w1, list_c1, label='analytic', marker='*')
+plt.scatter(list_w2, list_c2, label='formula')
+plt.legend()
+plt.show()
