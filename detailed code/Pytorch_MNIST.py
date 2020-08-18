@@ -17,9 +17,9 @@ test_dataset = datasets.MNIST('./data', train=False, download=True,
 train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [50000, 10000]) # 60000개 중 50000개는 train set, 10000개는 test set으로 랜덤으로 나눔
 print(len(train_dataset), len(val_dataset), len(test_dataset))                            #사이즈 확인
 
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True)   # Train set만 Shuffle 하는걸로 봐서 학습이 고르게 되기 위해 shuffle 하는듯
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=128, shuffle=False)      # validaion, test는 평가를 하기 위한 것이기 때문에 굳이 shuffle 안해줘도 되는것같음
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)   # Train set만 Shuffle 하는걸로 봐서 학습이 고르게 되기 위해 shuffle 하는듯
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=False)      # validaion, test는 평가를 하기 위한 것이기 때문에 굳이 shuffle 안해줘도 되는것같음
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 # ====== Inspecting Dataset ====== # (없어도 되는 부분이긴 함)
 examples = enumerate(train_loader)                          # 리스트 안에 데이터를 순번 : index 로 묶어서 할당해줌
@@ -36,17 +36,17 @@ for i in range(6):
 plt.show()                                                             # 이거 해야 볼 수 있음
 
 # ====== Model Architecture ====== #
-class LinearModel(nn.Module):
+class LinearModel(nn.Module):                                                 # LinearModel을 상속받아서 input = 28 * 28 = 784, output = 10(0~9사이의 숫자)로 layer 하나 생성
     def __init__(self):
         super(LinearModel, self).__init__()
         self.linear = nn.Linear(in_features=784, out_features=10, bias=True)
 
     def forward(self, x):
-        x = self.linear(x)
+        x = self.linear(x)                                                   # Linear first layer
         return x
 
 # ====== Cost Function Define (Loss Function Define) ====== #
-cls_loss = nn.CrossEntropyLoss() # CrossEntropy를 Cost function으로 지정
+cls_loss = nn.CrossEntropyLoss()                                              # CrossEntropy를 Cost function으로 지정
 
 # ====== Train & Evaluation ======= #
 import torch.optim as optim
@@ -54,11 +54,11 @@ from sklearn.metrics import accuracy_score
 
 # ------ Construct Model ------ #
 model = LinearModel()
-print('Number of {} parameters'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
+print('Number of {} parameters'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))   # update 해야하는 parameter의 개수를 출력
 
 # ------ Construct Optimizer ------ #
-lr = 0.005 # Learning Rate
-optimizer = optim.SGD(model.parameters(), lr=lr)
+lr = 0.005                                        # Learning Rate
+optimizer = optim.SGD(model.parameters(), lr=lr)  # SGD(Stochastic gradient descent) : 경사하강법 사용
 
 list_epoch = []
 list_train_loss = []
@@ -74,17 +74,17 @@ for i in range(epoch):
     optimizer.zero_grad()
 
     for input_X, true_y in train_loader:
-        input_X = input_X.squeeze()
-        input_X = input_X.view(-1, 784)
+        input_X = input_X.squeeze()                    # squeeze() : 차원의 원소가 1인 차원을 없애줌.. 이해잘 안됨 왜 여기서 쓰지
+        input_X = input_X.view(-1, 784)                # data의 차원을 (data 개수, 784)로 변경
         pred_y = model(input_X)
 
-        loss = cls_loss(pred_y.squeeze(), true_y)
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.detach().numpy()
-    train_loss = train_loss / len(train_loader)
-    list_train_loss.append(train_loss)
-    list_epoch.append(i)
+        loss = cls_loss(pred_y.squeeze(), true_y)      # loss 계산
+        loss.backward()                                # 역으로 가면서 gradient 계산
+        optimizer.step()                               # 계산된 gradient 바탕으로 weight update
+        train_loss += loss.detach().numpy()            # 미분을 멈추고(detach()), numpy배열로 변환(numpy())
+    train_loss = train_loss / len(train_loader)        # loss의 평균값을 구함
+    list_train_loss.append(train_loss)                 # loss의 평균을 리스트에 추가
+    list_epoch.append(i)                               # epoch 추가
 
     # ------ validation ------ #
     val_loss = 0
@@ -109,6 +109,7 @@ for i in range(epoch):
     for input_X, true_y in test_loader:
         input_X = input_X.squeeze()
         input_X = input_X.view(-1, 784)
+        # 밑에 두 부분 이해 잘 안됨
         pred_y = model(input_X).max(1, keepdim=True)[1].squeeze()
         correct += pred_y.eq(true_y).sum()
 
